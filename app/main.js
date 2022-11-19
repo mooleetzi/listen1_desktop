@@ -29,6 +29,11 @@ let mainWindow;
 let floatingWindow;
 /** @type {electron.Tray} */
 let appTray;
+
+/** enable_status_bar_lyric */
+let showStatusBarLyric;
+let currentLyric;
+
 //platform-specific
 switch (process.platform) {
   case "darwin":
@@ -64,6 +69,7 @@ const globalShortcutMapping = {
   "CmdOrCtrl+Alt+Left": "left",
   "CmdOrCtrl+Alt+Right": "right",
   "CmdOrCtrl+Alt+Space": "space",
+  "Command+H": "hide",
   MediaNextTrack: "right",
   MediaPreviousTrack: "left",
   MediaPlayPause: "space",
@@ -82,7 +88,10 @@ function initialTray(mainWindow, track) {
   let nowPlayingArtist = `歌手: ${track.artist}`;
 
   function toggleVisiable() {
-    mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
+    if (!mainWindow.isVisible()) {
+      mainWindow.show();
+    }
+    mainWindow.focus();
   }
   const menuTemplate = [
     {
@@ -601,6 +610,14 @@ ipcMain.on("currentLyric", (event, arg) => {
       floatingWindow.webContents.send("currentLyricTrans", arg.tlyric);
     }
   }
+  if (typeof arg === "string") {
+    currentLyric = arg
+  } else {
+    currentLyric = arg.lyric
+  }
+  if (process.platform === "darwin" && showStatusBarLyric) {
+    appTray.setTitle(currentLyric)
+  }
 });
 
 ipcMain.on("trackPlayingNow", (event, track) => {
@@ -629,6 +646,15 @@ ipcMain.on("control", async (event, arg, params) => {
 
     case "disable_lyric_floating_window":
       floatingWindow?.hide();
+      break;
+    case "enable_status_bar_lyric":
+      appTray.setTitle(currentLyric)
+      showStatusBarLyric = true
+      break;
+
+    case "disable_status_bar_lyric":
+      appTray.setTitle("")
+      showStatusBarLyric = false
       break;
 
     case "window_min":
